@@ -8,7 +8,11 @@
 
 import requests
 from datetime import datetime
+from time import sleep
+from itertools import count
+from functools import partial
 from network_rtt.utility import getURL
+from utils.iter import numElements
 import logging
 logger = logging.getLogger(__name__)
 
@@ -32,11 +36,22 @@ def measureRTT(url, timeout, requestNo):
 			.format(r.status_code, timeBefore, requestNo, rtt, r.text))
 
 	except requests.exceptions.Timeout:
-		logger.info('timeout,{0},{1}'.format(timeBefore, requestNo))
+		logger.error('timeout,{0},{1}'.format(timeBefore, requestNo))
 	
 	except:
-		logger.info('error,{0},{1}'.format(timeBefore, requestNo))
+		logger.error('error,{0},{1}'.format(timeBefore, requestNo))
 	
+
+
+def delayedRTT(delaySeconds, url, timeout, requestNo):
+	"""
+	[Integer] delaySeconds, ...
+
+	It sleeps for delaySeconds, then call measureRTT() with the given
+	parameters.
+	"""
+	sleep(delaySeconds)
+	measureRTT(url, timeout, requestNo)
 
 
 
@@ -53,4 +68,6 @@ if __name__ == '__main__':
 	logging.getLogger('requests').setLevel(logging.WARNING)
 	logging.getLogger('urllib3').setLevel(logging.WARNING)
 
-	measureRTT(getURL(), 2, 1)
+	# Simply creating the map() object won't do anything yet. We need to 
+	# consume it to make things happen. Therefore the numElement call.
+	numElements(map(partial(delayedRTT, 2, getURL(), 1), range(1,11)))
