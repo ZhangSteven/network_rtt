@@ -4,8 +4,16 @@
 # 
 
 from utils.iter import numElements
+from datetime import datetime, timedelta
+from functools import partial
+from toolz import functoolz
 import logging
 logger = logging.getLogger(__name__)
+
+
+
+class TooFewTimeSlots(Exception):
+	pass
 
 
 
@@ -74,9 +82,96 @@ def correctResponse(line):
 
 
 
+def interval(dt1, dt2, line):
+	"""
+	[datetime] dt1, [datetime] dt2, [String] line => [Bool] does the request
+		time fall into this time interval (dt1, dt2)
+
+	Assumption: this line is a valid rtt response
+	
+	INFO 2019-03-03 11:29:04,531 rtt | 200,2019-03-03 11:29:04.511230,1,0.02,response 1
+	"""
+	try:
+		dt = datetime.strptime(line.split('|')[1].split(',')[1], '%Y-%m-%d %H:%M:%S.%f')
+		if (dt1 < dt) and (dt <= dt2):
+			return True
+		else:
+			return False
+
+	except:
+		logger.exception('interval(): {0}'.format(line))
+		return False
+
+
+
+def histogram(dates, lines):
+	"""
+	[List] dates, [List] lines =>
+		[List] number of lines falling into each time interval
+
+	dates is a list of datetime objects: [t1, t2, ... tn]
+
+	We then form a list of intervals based on it:
+
+	[(t1, t2), (t2, t3), ... (t_n-1, tn)]
+
+	The function works as below:
+
+	First of all, each line is mapped to a tuple of True or False, indicating
+	whether it falls into a particular interval, like below:
+
+	(True, False, False, ...) 
+	(False, True, False, ...)
+	(True, False, False, ...)
+
+	Second, we map True to 1 and False to 0, so that it becomes
+
+	(1, 0, 0, ...)
+	(0, 1, 0, ...)
+	(1, 0, 0, ...)
+	
+	Then, we zip each column into one item, so that we have a list of
+	indications of each time interval,
+
+	(1, 0, 1, ...)
+	(0, 1, 0, ...)
+	(0, 0, 0, ...)
+
+	Finally, we sum each tuple to arrive at the total number of lines falling
+	into each time interval.
+	"""
+	if len(dates) < 2:
+		logger.error('intervals(): {0}'.format(dates))
+		raise TooFewTimeSlots()
+
+
+	def take2(items, index):
+		return items[index:index+2]
+
+
+	def toIntervalFunc(timeInterval):
+		"""
+		[List] timeInterval => [Function Object] a partially applied "interval"
+			function
+
+		Where timeInterval is a list [dt1, dt2]
+		"""
+		return partial(interval, timeInterval[0], timeInterval[1])
+
+
+	timeIntervals = map(partial(take2, dates), range(len(dates)-1))
+	intervalFunctions = map(toIntervalFunc, timeIntervals)
+
+	return map(sum \
+			  , zip(*map(functoolz.compose(partial(map, lambda x: 1 if x else 0) \
+				   		   				  , functoolz.juxt(intervalFunctions)) \
+				   		, lines)))
+
+
+
+
 if __name__ == '__main__':
 	import logging.config
 	logging.config.fileConfig('logging.config', disable_existing_loggers=False)
 
 	
-
