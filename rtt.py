@@ -70,4 +70,4 @@ if __name__ == '__main__':
 
 	# Simply creating the map() object won't do anything yet. We need to 
 	# consume it to make things happen. Therefore the numElement call.
-	numElements(map(partial(delayedRTT, 5, getURL(), 3), range(1,5)))
+	numElements(map(partial(delayedRTT, 5, getURL(), 1), range(1,1000)))
