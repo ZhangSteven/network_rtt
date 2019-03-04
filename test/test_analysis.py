@@ -3,7 +3,8 @@
 
 import unittest2
 from network_rtt.analysis import readLine, infoLine, httpStatus200, \
-                                correctResponse, interval, histogram
+                                correctResponse, interval, histogram, \
+                                analyzeFile
 from network_rtt.utility import getCurrentDirectory
 from utils.iter import numElements
 from functools import partial
@@ -71,3 +72,14 @@ class TestAnalysis(unittest2.TestCase):
                 , 'INFO 2019-03-03 11:59:31,816 rtt | 200,2019-03-03 11:59:31.802230,4,0.014,response 4' \
                 ]
         self.assertEqual([1, 2, 0], list(histogram(timeSlots, lines)))
+
+
+
+    def testAnalyzeFile(self):
+        inputFile = join(getCurrentDirectory(), 'test', 'samplelog.log')
+        timeSlots = [datetime.strptime('2019-03-03 11:00:00', '%Y-%m-%d %H:%M:%S') \
+                    , datetime.strptime('2019-03-03 11:30:00', '%Y-%m-%d %H:%M:%S')
+                    , datetime.strptime('2019-03-03 12:00:00', '%Y-%m-%d %H:%M:%S')
+                    , datetime.strptime('2019-03-03 12:30:00', '%Y-%m-%d %H:%M:%S')]
+
+        self.assertEqual([2, 3, 3], list(analyzeFile(timeSlots, inputFile)))

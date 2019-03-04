@@ -149,7 +149,7 @@ def histogram(dates, lines):
 		return items[index:index+2]
 
 
-	def toIntervalFunc(timeInterval):
+	def intervaFunc(timeInterval):
 		"""
 		[List] timeInterval => [Function Object] a partially applied "interval"
 			function
@@ -159,14 +159,28 @@ def histogram(dates, lines):
 		return partial(interval, timeInterval[0], timeInterval[1])
 
 
-	timeIntervals = map(partial(take2, dates), range(len(dates)-1))
-	intervalFunctions = map(toIntervalFunc, timeIntervals)
+	intervals = map(partial(take2, dates), range(len(dates)-1))
+	intervalFunctions = map(intervaFunc, intervals)
 
 	return map(sum \
 			  , zip(*map(functoolz.compose(partial(map, lambda x: 1 if x else 0) \
 				   		   				  , functoolz.juxt(intervalFunctions)) \
 				   		, lines)))
 
+
+
+def analyzeFile(dates, file):
+	"""
+	[List] dates, [String] file => [List] number of lines falling into 
+											each time interval
+	
+	
+	"""	
+	return histogram(dates \
+					, functoolz.compose(partial(filter, correctResponse) \
+									   , partial(filter, httpStatus200) \
+									   , partial(filter, infoLine) \
+									   , readLine)(file))
 
 
 
